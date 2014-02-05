@@ -17,8 +17,8 @@ Jeweler::Tasks.new do |gem|
   gem.name = "ruby-rs_analysis"
   gem.homepage = "http://github.com/sugahara/ruby-rs_analysis"
   gem.license = "MIT"
-  gem.summary = %Q{TODO: one-line summary of your gem}
-  gem.description = %Q{TODO: longer description of your gem}
+  gem.summary = %Q{R/S Analysis in Ruby}
+  gem.description = %Q{This gem calculates Hurst parameter and R/S statistics for Traffic analysis}
   gem.email = "j.sghr.jp@gmail.com"
   gem.authors = ["Jun Sugahara"]
   # dependencies defined in Gemfile
