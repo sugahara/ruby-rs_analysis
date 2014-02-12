@@ -1,5 +1,5 @@
 class Array
   def avg
-    self.inject(:+)/a.size.to_f
+    self.inject(:+)/self.size.to_f
   end
 end

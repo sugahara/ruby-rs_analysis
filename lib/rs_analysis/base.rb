@@ -3,13 +3,13 @@ require 'rs_analysis/approximate/least_square'
 require 'rs_analysis/error'
 require 'rs_analysis/array'
 module RSAnalysis
-  include Approximate
   class Base
+  include Approximate
     attr_accessor :log_rs_statistics, :hurst_mean, :hurst_max, :hurst_min
     DEFAULT_OPTS = {
       :k_max => 100,
       :k_min => 2,
-      :m_c => 50,
+      :sample_size => 50,
       :use_delta_n => true
     }
     RS_INDEX = 0
@@ -17,19 +17,7 @@ module RSAnalysis
     RS_MAX_INDEX = 2
     RS_MIN_INDEX = 3
 
-    @rs_statistics = []
-    @rs_statistics_mean = []
-    @rs_statistics_max = []
-    @rs_statistics_min = []
 
-    @log_rs_statistics = []
-    @log_rs_statistics_mean = []
-    @log_rs_statistics_min = []
-    @log_rs_statistics_max = []
-
-    @hurst_mean = 0.0
-    @hurst_max = 0.0
-    @hurst_min = 0.0
 
     def initialize(options)
       @opts = DEFAULT_OPTS.merge(options)
@@ -39,13 +27,45 @@ module RSAnalysis
       @k_max = @opts[:k_max]
       @k_min = @opts[:k_min]
       @use_delta_n = @opts[:use_delta_n]
-      @delta_n = get_delta_n(@data_array_size, @k_max, @sample_size)
+      @delta_n = calc_delta_n(@data_array_size, @k_max, @sample_size)
       check_config_error()
 
-      @data_sum = [0.0]
+      @data_array_sum = [0.0]
       @data_array_size.times do |t|
-        @data_sum[t+1] = @data_sum[t] + @data[t]
+        @data_array_sum[t+1] = @data_array_sum[t] + @data_array[t]
       end
+
+      @rs_statistics = []
+      @rs_statistics_mean = []
+      @rs_statistics_max = []
+      @rs_statistics_min = []
+
+      @log_rs_statistics = []
+      @log_rs_statistics_mean = []
+      @log_rs_statistics_min = []
+      @log_rs_statistics_max = []
+
+      @hurst_mean = 0.0
+      @hurst_max = 0.0
+      @hurst_min = 0.0
+
+    end
+
+    def calculate()
+      begin
+        set_of_rs_statistics = calc_rs_statistics()
+      rescue KMinValueTooBigException
+        @hurst_mean = 0.0
+        @hurst_max = 0.0
+        @hurst_min = 0.0
+      else
+        set_of_log_rs_statistics = calc_rs_statistics_logarithm(set_of_rs_statistics)
+        hurst = calc_least_square(set_of_log_rs_statistics)
+        @hurst_mean = hurst[0][1]
+        @hurst_max = hurst[1][1]
+        @hurst_min = hurst[2][1]
+      end
+      return @hurst_mean, @hurst_max, @hurst_min
     end
 
     private
@@ -56,7 +76,7 @@ module RSAnalysis
     end
 
     def check_config_error()
-      if @data_size < @k_max
+      if @data_array_size < @k_max
         raise "k_max is too big or data_array_size is too small."
       end
       check_k_error()
@@ -68,9 +88,9 @@ module RSAnalysis
     end
 
     def s(n,k)
-      avg = (@data_sum[n+k] - @data_sum[n]) / k
+      avg = (@data_array_sum[n+k] - @data_array_sum[n]) / k
       sum = 0
-      @data[n...n+k].each do |v|
+      @data_array[n...n+k].each do |v|
         sum += (v - avg)**2
       end
       Math::sqrt(sum/k)
@@ -96,7 +116,7 @@ module RSAnalysis
     end
 
     def need_delta_n?(k)
-      if k <= @data_size/@sample_size
+      if k <= @data_array_size/@sample_size
         return false
       end
       true
@@ -111,12 +131,12 @@ module RSAnalysis
         n = 0
         loop do 
           if need_delta_n?(k) && @use_delta_n
-            @delta_n = calc_delta_n(k)
+            @delta_n = calc_delta_n(@data_array_size, k, @sample_size)
             n = m * @delta_n
           else
             n = m * k
           end
-          break if n+k > @data_size
+          break if n+k > @data_array_size
 
           q = q(n,k)
 
@@ -170,23 +190,5 @@ module RSAnalysis
       return [c0_mean, c1_mean], [c0_max, c1_max], [c0_min, c1_min]
     end
 
-    def calculate()
-      begin
-        set_of_rs_statistics = calc_rs_statistics()
-      rescue KMinValueTooBigException
-        @hurst_mean = 0.0
-        @hurst_max = 0.0
-        @hurst_min = 0.0
-      else
-        set_of_log_rs_statistics = get_rs_statistics_logarithm(set_of_rs_statistics)
-        hurst = least_square(set_of_log_rs_statistics)
-        @hurst_mean = hurst[0][1]
-        @hurst_max = hurst[1][1]
-        @hurst_min = hurst[2][1]
-      end
-      return @hurst_mean, @hurst_max, @hurst_min
-    end
-
   end
-
 end
