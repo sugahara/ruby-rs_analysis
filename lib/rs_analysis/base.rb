@@ -54,7 +54,7 @@ module RSAnalysis
     def calculate()
       begin
         set_of_rs_statistics = calc_rs_statistics()
-      rescue KMinValueTooBigException
+      rescue KMinValueReachedKMaxException
         @hurst_mean = 0.0
         @hurst_max = 0.0
         @hurst_min = 0.0
@@ -87,7 +87,11 @@ module RSAnalysis
           if q.nan?
             new_options = @opts.update(:k_min => @opts[:k_min]+1)
             @k_min = @opts[:k_min]
-            return RSAnalysis::Base.new(new_options).calc_rs_statistics
+            begin
+              return RSAnalysis::Base.new(new_options).calc_rs_statistics
+            rescue KMinValueTooBigException
+              raise KMinValueReachedKMaxException
+            end
           end
 
           rs_statistic.push q
@@ -145,7 +149,7 @@ module RSAnalysis
 
     def check_k_error()
       if @k_min >= @k_max
-        raise KMinValueTooBigException "k_min is not less than k_max."
+        raise KMinValueTooBigException, "k_min is not less than k_max."
       end
     end
 
