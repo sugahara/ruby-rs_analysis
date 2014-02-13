@@ -5,7 +5,7 @@ require 'rs_analysis/array'
 module RSAnalysis
   class Base
   include Approximate
-    attr_accessor :log_rs_statistics, :hurst_mean, :hurst_max, :hurst_min
+    attr_accessor :log_rs_statistics, :hurst_mean, :hurst_max, :hurst_min, :opts
     DEFAULT_OPTS = {
       :k_max => 100,
       :k_min => 2,
@@ -68,6 +68,40 @@ module RSAnalysis
       return @hurst_mean, @hurst_max, @hurst_min
     end
 
+    def calc_rs_statistics()
+      for k in @k_min..@k_max
+        rs_statistic = []
+        m = 0
+        n = 0
+        loop do 
+          if need_delta_n?(k) && @use_delta_n
+            @delta_n = calc_delta_n(@data_array_size, k, @sample_size)
+            n = m * @delta_n
+          else
+            n = m * k
+          end
+          break if n+k > @data_array_size
+
+          q = q(n,k)
+
+          if q.nan?
+            new_options = @opts.update(:k_min => @opts[:k_min]+1)
+            @k_min = @opts[:k_min]
+            return RSAnalysis::Base.new(new_options).calc_rs_statistics
+          end
+
+          rs_statistic.push q
+          m += 1
+          break if @use_delta_n && m >= @sample_size
+        end
+        @rs_statistics[k] = rs_statistic
+        @rs_statistics_mean[k] = rs_statistic.avg
+        @rs_statistics_max[k] = rs_statistic.max
+        @rs_statistics_min[k] = rs_statistic.min
+      end
+      return @rs_statistics, @rs_statistics_mean, @rs_statistics_max, @rs_statistics_min
+    end
+
     private
     def calc_delta_n(data_array_size, k, sample_size)
       result = ((data_array_size-k)/(sample_size-1)).floor
@@ -120,41 +154,6 @@ module RSAnalysis
         return false
       end
       true
-    end
-
-    def calc_rs_statistics()
-
-
-      for k in @k_min..@k_max
-        rs_statistic = []
-        m = 0
-        n = 0
-        loop do 
-          if need_delta_n?(k) && @use_delta_n
-            @delta_n = calc_delta_n(@data_array_size, k, @sample_size)
-            n = m * @delta_n
-          else
-            n = m * k
-          end
-          break if n+k > @data_array_size
-
-          q = q(n,k)
-
-          if q.nan?
-            new_options = @opts.update(:k_min => @opts[:k_min]+1)
-            return RSAnalysis::Base.new(new_options).calc_rs_statistics
-          end
-
-          rs_statistic.push q
-          m += 1
-          break if @use_delta_n && m >= @sample_size
-        end
-        @rs_statistics[k] = rs_statistic
-        @rs_statistics_mean[k] = rs_statistic.avg
-        @rs_statistics_max[k] = rs_statistic.max
-        @rs_statistics_min[k] = rs_statistic.min
-      end
-      return @rs_statistics, @rs_statistics_mean, @rs_statistics_max, @rs_statistics_min
     end
 
     def calc_rs_statistics_logarithm(set_of_rs_statistics)
