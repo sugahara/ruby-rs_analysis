@@ -1,27 +1,40 @@
 module RSAnalysis
   class Logger
 
-    def initialize(source_file_name, options)
+    def initialize(source_file_name)
       @file_name = source_file_name
-      @opts = options      
-      hurst_logger = File.open(@file_name+".hurst", 'w')
-      hurst_logger.puts "# k_min=#{@opts[:k_min]}"
-      hurst_logger.puts "# k_max=#{@opts[:k_max]}"
-      hurst_logger.puts "# sample_size=#{@opts[:sample_size]}"
-      hurst_logger.puts "# use_delta_n=#{@opts[:use_delta_n]}"
-      hurst_logger.puts "# #{Time.now}"
-      hurst_logger.puts "# Number Hurst Hsup Hinf"
-      hurst_logger.close
+    end
+
+    def out_initial_config(opts)
+      File.open(@file_name+".hurst", 'w'){|f|
+        f.puts "# k_min=#{opts[:k_min]}"
+        f.puts "# k_max=#{opts[:k_max]}"
+        f.puts "# sample_size=#{opts[:sample_size]}"
+        f.puts "# use_delta_n=#{opts[:use_delta_n]}"
+        f.puts "# #{Time.now}"
+        f.puts "# Number H Hsup Hinf"
+      }
+    end
+
+    def out_adjusted_config(opts, number)
+      File.open(@file_name+".#{number}.rs_stat", 'w'){|f|
+        f.puts "# k_min=#{opts[:k_min]}"
+        f.puts "# k_max=#{opts[:k_max]}"
+        f.puts "# sample_size=#{opts[:sample_size]}"
+        f.puts "# use_delta_n=#{opts[:use_delta_n]}"
+        f.puts "# #{Time.now}"
+        f.puts "# log(k) rs_statistics rs_statistics_mean"
+      }
     end
 
     def hurst(data, number)
-      @hurst_logger = File.open(@file_name+".hurst", 'a'){|f|
+      File.open(@file_name+".hurst", 'a'){|f|
         f.puts "#{number} #{data[0]} #{data[1]} #{data[2]}"
       }
     end
 
     def rs_statistics(data, number)
-      File.open(@file_name+".#{number}.rs_stat", 'w'){|f|
+      File.open(@file_name+".#{number}.rs_stat", 'a'){|f|
         data.each_with_index do |samples, k|
           next if samples.nil?
           statistics_mean = samples.inject(:+) / samples.size.to_f
