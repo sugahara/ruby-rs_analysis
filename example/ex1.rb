@@ -1,8 +1,5 @@
 require 'ruby-rs_analysis'
 
-
-
-
 file = File.open(ARGV[0], 'r')
 data_array = file.readlines.map{|v| v.to_f}
 
@@ -15,5 +12,4 @@ opts = {
 }
 
 rs = RSAnalysis::Base.new(opts)
-
-p rs.calculate
+puts rs.calculate
