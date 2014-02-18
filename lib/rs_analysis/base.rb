@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 require 'gsl'
 require 'rs_analysis/approximate/least_square'
 require 'rs_analysis/error'
@@ -24,10 +25,8 @@ module RSAnalysis
       @data_array = @opts[:data_array]
       @data_array_size = @data_array.size
       @sample_size = @opts[:sample_size]
-      @k_max = @opts[:k_max]
-      @k_min = @opts[:k_min]
       @use_delta_n = @opts[:use_delta_n]
-      @delta_n = calc_delta_n(@data_array_size, @k_max, @sample_size)
+      @delta_n = calc_delta_n(@data_array_size, @opts[:k_max], @sample_size)
       check_config_error()
 
       @data_array_sum = [0.0]
@@ -69,7 +68,7 @@ module RSAnalysis
     end
 
     def calc_rs_statistics()
-      for k in @k_min..@k_max
+      for k in @opts[:k_min]..@opts[:k_max]
         rs_statistic = []
         m = 0
         n = 0
@@ -86,7 +85,6 @@ module RSAnalysis
 
           if q.nan?
             new_options = @opts.update(:k_min => @opts[:k_min]+1)
-            @k_min = @opts[:k_min]
             begin
               return RSAnalysis::Base.new(new_options).calc_rs_statistics
             rescue KMinValueTooBigException
@@ -114,7 +112,7 @@ module RSAnalysis
     end
 
     def check_config_error()
-      if @data_array_size < @k_max
+      if @data_array_size < @opts[:k_max]
         raise "k_max is too big or data_array_size is too small."
       end
       check_k_error()
@@ -148,7 +146,7 @@ module RSAnalysis
     end
 
     def check_k_error()
-      if @k_min >= @k_max
+      if @opts[:k_min] >= @opts[:k_max]
         raise KMinValueTooBigException, "k_min is not less than k_max."
       end
     end
@@ -161,7 +159,7 @@ module RSAnalysis
     end
 
     def calc_rs_statistics_logarithm(set_of_rs_statistics)
-      (@k_min..@k_max).each do |k|
+      (@opts[:k_min]..@opts[:k_max]).each do |k|
         @log_rs_statistics[k] = set_of_rs_statistics[RS_INDEX][k].map{|v| Math::log(v)}
         @log_rs_statistics_mean[k] = Math::log(set_of_rs_statistics[RS_MEAN_INDEX][k])
         @log_rs_statistics_max[k] = Math::log(set_of_rs_statistics[RS_MAX_INDEX][k])
@@ -171,16 +169,16 @@ module RSAnalysis
     end
 
     def calc_least_square(set_of_log_rs_statistics, limit = nil)
-      x = GSL::Vector.alloc(@k_max - @k_min+1)
-      y = GSL::Vector.alloc(@k_max - @k_min+1)
-      y_max = GSL::Vector.alloc(@k_max - @k_min+1)
-      y_min = GSL::Vector.alloc(@k_max - @k_min+1)
+      x = GSL::Vector.alloc(@opts[:k_max] - @opts[:k_min]+1)
+      y = GSL::Vector.alloc(@opts[:k_max] - @opts[:k_min]+1)
+      y_max = GSL::Vector.alloc(@opts[:k_max] - @opts[:k_min]+1)
+      y_min = GSL::Vector.alloc(@opts[:k_max] - @opts[:k_min]+1)
       if limit.nil?
-        upper_limit = @k_max
+        upper_limit = @opts[:k_max]
       else
         upper_limit = limit
       end
-      (@k_min..upper_limit).each_with_index do |k, i|
+      (@opts[:k_min]..upper_limit).each_with_index do |k, i|
         x[i] = Math::log(k)
         y[i] = set_of_log_rs_statistics[RS_MEAN_INDEX][k]
         y_max[i] = set_of_log_rs_statistics[RS_MAX_INDEX][k]
