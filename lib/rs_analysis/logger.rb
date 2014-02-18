@@ -27,9 +27,9 @@ module RSAnalysis
       }
     end
 
-    def hurst(data, number)
+    def hurst(data, number, timestamp)
       File.open(@file_name+".hurst", 'a'){|f|
-        f.puts "#{number} #{data[0]} #{data[1]} #{data[2]}"
+        f.puts "#{timestamp} #{number} #{data[0]} #{data[1]} #{data[2]}"
       }
     end
 
