@@ -84,9 +84,10 @@ module RSAnalysis
           q = q(n,k)
 
           if q.nan?
-            new_options = @opts.update(:k_min => @opts[:k_min]+1)
+            @opts.update(:k_min => @opts[:k_min]+1)
+            check_config_error()
             begin
-              return RSAnalysis::Base.new(new_options).calc_rs_statistics
+              return calc_rs_statistics()
             rescue KMinValueTooBigException
               raise KMinValueReachedKMaxException
             end
@@ -190,6 +191,5 @@ module RSAnalysis
       c0_min, c1_min = least_square_fit(x, y_min, options)
       return [c0_mean, c1_mean], [c0_max, c1_max], [c0_min, c1_min]
     end
-
   end
 end
